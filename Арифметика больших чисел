@@ -1,0 +1,194 @@
+{Задание 7
+Проверить что 63!-61!=71*k
+найти это k}
+
+program lab3;
+
+type
+  PNum = ^TNum;
+  TNum = record
+    digit: integer;
+    next, prev: PNum;
+  end;
+
+procedure ToBigNum(n: integer; var head, tail: PNum);//представление числа в виде большого
+var p: PNum;
+begin
+  head := nil;
+  tail := nil;
+  if n > 0 then
+  begin
+    New(head);
+    head^.digit := n mod 10;
+    head^.next := nil;
+    head^.prev := nil;
+    tail := head;
+    n := n div 10;
+  end;
+  while n > 0 do
+  begin
+    New(p);
+    p^.digit := n mod 10;
+    p^.next := head;
+    p^.prev := nil;
+    head^.prev := p;
+    head := p;
+    n := n div 10;
+  end;
+end;
+
+procedure Print(head: PNum);//вывод большого числа
+begin
+  if head = nil then
+    Write(0)
+  else
+    while head <> nil do
+    begin
+      Write(head^.digit);
+      head := head^.next;
+    end;
+end;
+
+procedure Multiply(tail1: PNum; n: integer; var head2, tail2: PNum);//умножение числа (подсчёт 63! и 61!)
+var carry: integer; 
+    p: PNum;
+begin
+  carry := 0;
+  head2 := nil;
+  tail2 := nil;
+  if n > 0 then
+    while (tail1 <> nil) or (carry > 0) do
+    begin
+      New(p);
+      p^.digit := carry;
+      if tail1 <> nil then
+      begin
+        p^.digit := p^.digit + tail1^.digit * n;
+        tail1 := tail1^.prev;
+      end;
+      carry := p^.digit div 10;
+      p^.digit := p^.digit mod 10;
+      p^.next := head2;
+      p^.prev := nil;
+      if head2 = nil then
+        tail2 := p
+      else
+        head2^.prev := p;
+      head2 := p;
+    end;
+end;
+
+
+procedure vch(tail61, tail63: PNum; var head, tail: PNum);//Вычитание
+var carry: integer;
+    p: PNum;
+begin
+  carry := 0;
+  while (tail63 <> nil) or (tail61 <> nil) or (carry > 0) do
+  begin
+    New(p);
+    p^.digit := carry;
+    if tail63 <> nil then
+    begin
+      p^.digit := p^.digit + tail63^.digit;
+      tail63 := tail63^.prev;
+    end;
+    if tail61 <> nil then
+    begin
+      if p^.digit >= tail61^.digit then
+      begin
+        p^.digit := p^.digit - tail61^.digit;
+        tail61 := tail61^.prev
+      end
+      else
+      begin
+        p^.digit := p^.digit + 10;
+        p^.digit := p^.digit - tail61^.digit;
+        tail61 := tail61^.prev;
+        tail61^.digit := tail61^.digit + 1;
+      end;
+    end;
+    carry := p^.digit div 10;
+    p^.digit := p^.digit mod 10;
+    p^.next := head;
+    p^.prev := nil;
+    if head = nil then
+      tail := p
+    else
+      head^.prev := p;
+    head := p;
+  end;
+end;
+
+procedure del(var headfin, headk, tailk: PNum);//Деление
+var x, i, k: integer;
+    fin: PNum;
+begin
+  i := 0;  
+  x := headfin^.digit;
+  while x < 71 do
+  begin
+    headfin := headfin^.next;
+    x := x * 10 + headfin^.digit; //выносим первую часть числа, которая поделится на 71
+  end;
+  while (x >= 71) do
+  begin
+    i := x div 71;  //целая часть  
+    x := x mod 71;  //остаток
+  end;
+  new(headk);
+  headk^.digit := i; //начинаем заполнять частное
+  i := 0;
+  fin := headk;
+  k := 0;            //первое деление отдельно, так как оно выполняется не по правилам
+  while (headfin^.next <> nil) do        //цикл продолжает деление
+  begin
+    while (headfin^.next <> nil) and (x < 71) do
+    begin
+      headfin := headfin^.next;
+      x := x * 10 + headfin^.digit;
+      k := k + 1;
+      if k > 1 then  //добавляем в частное 0, если сносим более 1 числа
+      begin
+        new(tailk);
+        tailk^.digit := 0;
+        tailk^.prev := fin;
+        fin^.next := tailk;
+        fin := tailk;
+      end; 
+    end;
+    k := 0;
+    i := x div 71;
+    x := x mod 71;
+    new(tailk);
+    tailk^.digit := i;
+    tailk^.prev := fin;
+    fin^.next := tailk;
+    fin := tailk;
+  end;
+end;
+
+var
+  head63, tail63, head61, tail61, headfin, tailfin, headk, tailk: PNum;
+
+begin
+  ToBigNum(1, head63, tail63);
+  for var  i := 1 to 63 do
+    Multiply(tail63, i, head63, tail63);
+  write('63! = ');
+  Print(head63);
+  ToBigNum(1, head61, tail61);
+  for var j := 1 to 61 do
+    Multiply(tail61, j, head61, tail61);
+  writeln;
+  write('61! = ');
+  Print(head61);
+  writeln;
+  write('63!-61! = ');
+  vch(tail61, tail63, headfin, tailfin);
+  Print(headfin);
+  writeln;
+  write('(63!-61!)/71 = ');
+  del(headfin, headk, tailk);
+  print(headk); 
+end.
